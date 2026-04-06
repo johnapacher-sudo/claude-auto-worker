@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import type { TaskResult } from "./types.js";
 
 export interface ClaudeRunnerConfig {
-  timeout: number; // milliseconds
+  timeout?: number; // milliseconds, default 600000 (10 minutes)
 }
 
 export interface RunOptions {
@@ -13,8 +13,8 @@ export interface RunOptions {
 export class ClaudeRunner {
   private config: ClaudeRunnerConfig;
 
-  constructor(config: ClaudeRunnerConfig) {
-    this.config = config;
+  constructor(config: ClaudeRunnerConfig = {}) {
+    this.config = { timeout: 600000, ...config };
   }
 
   run(options: RunOptions): Promise<TaskResult> {
