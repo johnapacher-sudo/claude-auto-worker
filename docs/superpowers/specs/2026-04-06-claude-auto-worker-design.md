@@ -176,8 +176,10 @@ auto-worker add <prompt>       # Add a task manually
   --title <text>               # Task title
 auto-worker list               # List all tasks
 auto-worker report [date]      # Show daily report
-auto-worker stop               # Stop the running scheduler
+auto-worker stop               # Stop the running scheduler (sends SIGTERM to PID)
 ```
+
+The `stop` command reads the PID from `data/scheduler.pid` and sends SIGTERM. The scheduler writes its PID to this file on startup and removes it on graceful shutdown.
 
 ## Task State Machine
 
