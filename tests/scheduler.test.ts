@@ -47,10 +47,8 @@ describe("Scheduler", () => {
       runner: mockRunner as any,
       reportsDir,
       pollInterval: 100,
-      timeout: 60000,
     });
 
-    // Run one tick manually
     await scheduler.tick();
 
     const tasks = store.getAll();
@@ -60,13 +58,12 @@ describe("Scheduler", () => {
     expect(tasks[0].result!.claudeResult).toBe("OK");
     expect(mockRunner.run).toHaveBeenCalledTimes(1);
 
-    scheduler.stop();
+    await scheduler.stop();
   }, 30000);
 
   it("processes tasks in priority order", async () => {
     const store = new TaskStore(tasksFile);
     store.addTask({ title: "low", prompt: "p1", cwd: process.cwd(), priority: 10 });
-    // Ensure unique task IDs (TaskStore uses Date.now() for IDs)
     await new Promise((r) => setTimeout(r, 2));
     store.addTask({ title: "high", prompt: "p2", cwd: process.cwd(), priority: 1 });
 
@@ -87,7 +84,6 @@ describe("Scheduler", () => {
       runner: mockRunner as any,
       reportsDir,
       pollInterval: 100,
-      timeout: 60000,
     });
 
     await scheduler.tick();
@@ -97,7 +93,7 @@ describe("Scheduler", () => {
     expect(mockRunner.run.mock.calls[0][0].prompt).toBe("p2"); // high priority first
     expect(mockRunner.run.mock.calls[1][0].prompt).toBe("p1"); // then low
 
-    scheduler.stop();
+    await scheduler.stop();
   }, 30000);
 
   it("marks task as failed when runner returns error", async () => {
@@ -121,7 +117,6 @@ describe("Scheduler", () => {
       runner: mockRunner as any,
       reportsDir,
       pollInterval: 100,
-      timeout: 60000,
     });
 
     await scheduler.tick();
@@ -129,7 +124,7 @@ describe("Scheduler", () => {
     const tasks = store.getAll();
     expect(tasks[0].status).toBe("failed");
 
-    scheduler.stop();
+    await scheduler.stop();
   });
 
   it("does nothing when no pending tasks", async () => {
@@ -141,16 +136,15 @@ describe("Scheduler", () => {
       runner: mockRunner as any,
       reportsDir,
       pollInterval: 100,
-      timeout: 60000,
     });
 
     await scheduler.tick();
     expect(mockRunner.run).not.toHaveBeenCalled();
 
-    scheduler.stop();
+    await scheduler.stop();
   });
 
-  it("writes PID file on start and removes on stop", () => {
+  it("writes PID file on start and removes on stop", async () => {
     const store = new TaskStore(tasksFile);
     const mockRunner = { run: vi.fn() };
     const pidFile = path.join(tmpDir, "scheduler.pid");
@@ -160,7 +154,6 @@ describe("Scheduler", () => {
       runner: mockRunner as any,
       reportsDir,
       pollInterval: 1000,
-      timeout: 60000,
       pidFile,
     });
 
@@ -169,7 +162,51 @@ describe("Scheduler", () => {
     const pid = parseInt(fs.readFileSync(pidFile, "utf-8"), 10);
     expect(pid).toBe(process.pid);
 
-    scheduler.stop();
+    await scheduler.stop();
     expect(fs.existsSync(pidFile)).toBe(false);
+  });
+
+  it("prevents concurrent tick execution", async () => {
+    const store = new TaskStore(tasksFile);
+    store.addTask({ title: "task 1", prompt: "p1", cwd: process.cwd(), priority: 1 });
+    await new Promise((r) => setTimeout(r, 2));
+    store.addTask({ title: "task 2", prompt: "p2", cwd: process.cwd(), priority: 2 });
+
+    let resolveFirst: () => void;
+    const firstPromise = new Promise<void>((r) => { resolveFirst = r; });
+
+    const mockRunner = {
+      run: vi.fn()
+        .mockImplementationOnce(async () => {
+          await firstPromise;
+          return { exitCode: 0, stdout: '{"result":"1"}', stderr: "", duration: 1, isClaudeError: false, claudeResult: "1", totalCostUsd: 0.01 };
+        })
+        .mockImplementationOnce(async () => ({
+          exitCode: 0, stdout: '{"result":"2"}', stderr: "", duration: 1, isClaudeError: false, claudeResult: "2", totalCostUsd: 0.01,
+        })),
+    };
+
+    const scheduler = new Scheduler({
+      store,
+      runner: mockRunner as any,
+      reportsDir,
+      pollInterval: 100,
+    });
+
+    // Start first tick (will hang)
+    const tick1 = scheduler.tick();
+    // Try second tick while first is still running
+    await scheduler.tick(); // should return immediately due to busy flag
+    expect(mockRunner.run).toHaveBeenCalledTimes(1);
+
+    // Resolve first tick
+    resolveFirst!();
+    await tick1;
+
+    // Now second tick should proceed
+    await scheduler.tick();
+    expect(mockRunner.run).toHaveBeenCalledTimes(2);
+
+    await scheduler.stop();
   });
 });
