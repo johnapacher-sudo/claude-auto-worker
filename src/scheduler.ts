@@ -71,11 +71,11 @@ export class Scheduler {
     fs.writeFileSync(this.pidFile, String(process.pid));
 
     // Run first tick immediately
-    this.tick();
+    this.tick().catch((err) => console.error("[scheduler] tick error:", err));
 
     this.timer = setInterval(() => {
       if (!this.running || this.busy) return;
-      this.tick();
+      this.tick().catch((err) => console.error("[scheduler] tick error:", err));
     }, this.pollInterval * 1000);
   }
 

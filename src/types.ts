@@ -49,9 +49,3 @@ export interface ReportSummary {
   totalDuration: number;
 }
 
-export interface SchedulerConfig {
-  pollInterval: number;
-  timeout: number;
-  tasksFile: string;
-  reportsDir: string;
-}
