@@ -47,6 +47,7 @@ export class Scheduler {
       const result: TaskResult = await this.runner.run({
         prompt: task.prompt,
         cwd: task.cwd,
+        claudeArgs: task.claudeArgs,
       });
 
       const status = result.exitCode === 0 && !result.isClaudeError ? "completed" : "failed";

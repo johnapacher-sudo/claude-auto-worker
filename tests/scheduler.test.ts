@@ -166,6 +166,43 @@ describe("Scheduler", () => {
     expect(fs.existsSync(pidFile)).toBe(false);
   });
 
+  it("passes task claudeArgs to runner", async () => {
+    const store = new TaskStore(tasksFile);
+    store.addTask({
+      title: "task with args",
+      prompt: "do stuff",
+      cwd: process.cwd(),
+      priority: 1,
+      claudeArgs: { model: "opus", maxTurns: 3 },
+    });
+
+    const mockRunner = {
+      run: vi.fn().mockResolvedValue({
+        exitCode: 0,
+        stdout: '{"result":"done"}',
+        stderr: "",
+        duration: 1,
+        isClaudeError: false,
+        claudeResult: "done",
+        totalCostUsd: 0.01,
+      } satisfies TaskResult),
+    };
+
+    const scheduler = new Scheduler({
+      store,
+      runner: mockRunner as any,
+      reportsDir,
+      pollInterval: 100,
+    });
+
+    await scheduler.tick();
+
+    expect(mockRunner.run).toHaveBeenCalledTimes(1);
+    expect(mockRunner.run.mock.calls[0][0].claudeArgs).toEqual({ model: "opus", maxTurns: 3 });
+
+    await scheduler.stop();
+  });
+
   it("prevents concurrent tick execution", async () => {
     const store = new TaskStore(tasksFile);
     store.addTask({ title: "task 1", prompt: "p1", cwd: process.cwd(), priority: 1 });
