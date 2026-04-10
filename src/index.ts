@@ -56,20 +56,24 @@ program
       fs.mkdirSync(LOGS_DIR, { recursive: true });
       const logStream = fs.openSync(LOG_FILE, "a");
 
-      const child = spawn("node", [
-        path.resolve(__dirname, "index.js"),
+      // Detect whether running via tsx or compiled JS
+      const isTsx = __filename.endsWith(".ts");
+      const childArgs = [
+        ...(isTsx ? ["tsx", path.resolve(__dirname, "index.ts")] : ["node", path.resolve(__dirname, "index.js")]),
         "start",
         "--detached",
         "--poll-interval", opts.pollInterval,
         "--timeout", opts.timeout,
         "--tasks-file", opts.tasksFile,
         "--reports-dir", opts.reportsDir,
-      ], {
+      ];
+      const child = spawn(isTsx ? "npx" : "node", childArgs, {
         detached: true,
         stdio: ["ignore", logStream, logStream],
       });
 
       child.unref();
+      fs.closeSync(logStream);
 
       // Write PID file immediately (child will overwrite on startLoop)
       fs.writeFileSync(PID_FILE, String(child.pid));
@@ -92,15 +96,15 @@ program
       pidFile: PID_FILE,
     });
 
-    process.on("SIGINT", () => {
+    process.on("SIGINT", async () => {
       console.log("Received SIGINT, shutting down...");
-      scheduler.stop();
+      await scheduler.stop();
       process.exit(0);
     });
 
-    process.on("SIGTERM", () => {
+    process.on("SIGTERM", async () => {
       console.log("Received SIGTERM, shutting down...");
-      scheduler.stop();
+      await scheduler.stop();
       process.exit(0);
     });
 

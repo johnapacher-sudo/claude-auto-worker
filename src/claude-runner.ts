@@ -26,7 +26,7 @@ export class ClaudeRunner {
       if (ca?.model) args.push("--model", ca.model);
       if (ca?.permissionMode) args.push("--permission-mode", ca.permissionMode);
       if (ca?.allowedTools?.length) args.push("--allowedTools", ...ca.allowedTools);
-      if (ca?.maxTurns) args.push("--max-turns", String(ca.maxTurns));
+      if (ca?.maxTurns != null) args.push("--max-turns", String(ca.maxTurns));
 
       const child = spawn("claude", args, {
         cwd: options.cwd,
