@@ -29,6 +29,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     startedAt: "2026-04-06T10:00:05Z",
     completedAt: "2026-04-06T10:00:20Z",
     result: null,
+    claudeArgs: null,
     ...overrides,
   };
 }

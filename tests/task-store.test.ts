@@ -30,7 +30,7 @@ describe("TaskStore", () => {
 
   it("reads existing tasks.json", () => {
     const filePath = path.join(tmpDir, "tasks.json");
-    fs.writeFileSync(filePath, JSON.stringify({ tasks: [{ id: "t1", title: "a", prompt: "b", cwd: "/tmp", status: "pending", priority: 5, createdAt: "2026-01-01T00:00:00Z", startedAt: null, completedAt: null, result: null }] }));
+    fs.writeFileSync(filePath, JSON.stringify({ tasks: [{ id: "t1", title: "a", prompt: "b", cwd: "/tmp", status: "pending", priority: 5, createdAt: "2026-01-01T00:00:00Z", startedAt: null, completedAt: null, result: null, claudeArgs: null }] }));
     const s = new TaskStore(filePath);
     expect(s.getAll()).toHaveLength(1);
     expect(s.getAll()[0].id).toBe("t1");

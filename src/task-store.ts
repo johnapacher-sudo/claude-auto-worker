@@ -25,8 +25,15 @@ export class TaskStore {
   }
 
   private read(): TaskFile {
-    const raw = fs.readFileSync(this.filePath, "utf-8");
-    return JSON.parse(raw) as TaskFile;
+    try {
+      const raw = fs.readFileSync(this.filePath, "utf-8");
+      return JSON.parse(raw) as TaskFile;
+    } catch {
+      console.error(`[task-store] Corrupt tasks.json, resetting to empty`);
+      const empty: TaskFile = { tasks: [] };
+      this.write(empty);
+      return empty;
+    }
   }
 
   private write(data: TaskFile): void {
@@ -65,6 +72,7 @@ export class TaskStore {
       startedAt: null,
       completedAt: null,
       result: null,
+      claudeArgs: null,
     };
     data.tasks.push(task);
     this.write(data);

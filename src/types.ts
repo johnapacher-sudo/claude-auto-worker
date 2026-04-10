@@ -1,3 +1,10 @@
+export interface ClaudeArgs {
+  model?: string;
+  permissionMode?: string;
+  allowedTools?: string[];
+  maxTurns?: number;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -9,6 +16,7 @@ export interface Task {
   startedAt: string | null;
   completedAt: string | null;
   result: TaskResult | null;
+  claudeArgs: ClaudeArgs | null;
 }
 
 export interface TaskResult {
