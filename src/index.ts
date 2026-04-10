@@ -3,6 +3,7 @@
 import { Command } from "commander";
 import fs from "node:fs";
 import path from "node:path";
+import { spawn } from "node:child_process";
 import { TaskStore } from "./task-store.js";
 import { ClaudeRunner } from "./claude-runner.js";
 import { Scheduler } from "./scheduler.js";
@@ -12,6 +13,8 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const TASKS_FILE = path.join(DATA_DIR, "tasks.json");
 const REPORTS_DIR = path.join(DATA_DIR, "reports");
 const PID_FILE = path.join(DATA_DIR, "scheduler.pid");
+const LOGS_DIR = path.join(DATA_DIR, "logs");
+const LOG_FILE = path.join(LOGS_DIR, "scheduler.log");
 
 function getStore(tasksFile?: string): TaskStore {
   return new TaskStore(tasksFile ?? TASKS_FILE);
@@ -31,7 +34,53 @@ program
   .option("--timeout <seconds>", "Max seconds per task", "600")
   .option("--tasks-file <path>", "Path to tasks file", TASKS_FILE)
   .option("--reports-dir <path>", "Path to reports directory", REPORTS_DIR)
+  .option("-d, --detach", "Run in background (detached mode)")
+  .option("--detached", "(internal) Indicates this is the background child process", false)
   .action(async (opts) => {
+    // If detach requested but this is NOT the child process, spawn child and exit
+    if (opts.detach && !opts.detached) {
+      // Check for already running scheduler
+      if (fs.existsSync(PID_FILE)) {
+        const pid = parseInt(fs.readFileSync(PID_FILE, "utf-8"), 10);
+        try {
+          process.kill(pid, 0); // signal 0 = check if alive
+          console.error(`Scheduler already running (PID ${pid})`);
+          process.exit(1);
+        } catch {
+          console.log(`Removing stale PID file (PID ${pid} not found)`);
+          fs.unlinkSync(PID_FILE);
+        }
+      }
+
+      // Ensure log directory exists
+      fs.mkdirSync(LOGS_DIR, { recursive: true });
+      const logStream = fs.openSync(LOG_FILE, "a");
+
+      const child = spawn("node", [
+        path.resolve(__dirname, "index.js"),
+        "start",
+        "--detached",
+        "--poll-interval", opts.pollInterval,
+        "--timeout", opts.timeout,
+        "--tasks-file", opts.tasksFile,
+        "--reports-dir", opts.reportsDir,
+      ], {
+        detached: true,
+        stdio: ["ignore", logStream, logStream],
+      });
+
+      child.unref();
+
+      // Write PID file immediately (child will overwrite on startLoop)
+      fs.writeFileSync(PID_FILE, String(child.pid));
+
+      console.log(`Scheduler started in background (PID ${child.pid})`);
+      console.log(`  Log file: ${LOG_FILE}`);
+      console.log(`  Stop with: auto-worker stop`);
+      process.exit(0);
+    }
+
+    // Normal (foreground or detached child) startup
     const store = getStore(opts.tasksFile);
     const runner = new ClaudeRunner({ timeout: parseInt(opts.timeout) * 1000 });
 
