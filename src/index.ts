@@ -207,4 +207,30 @@ program
     }
   });
 
+program
+  .command("logs")
+  .description("Show scheduler log output")
+  .option("-n, --lines <number>", "Number of lines to show", "20")
+  .option("-f, --follow", "Follow log output (stream)")
+  .action((opts) => {
+    if (!fs.existsSync(LOG_FILE)) {
+      console.log(`No log file found at ${LOG_FILE}`);
+      return;
+    }
+
+    if (opts.follow) {
+      const tail = spawn("tail", ["-f", LOG_FILE], { stdio: "inherit" });
+      process.on("SIGINT", () => {
+        tail.kill();
+        process.exit(0);
+      });
+    } else {
+      const lines = parseInt(opts.lines);
+      const content = fs.readFileSync(LOG_FILE, "utf-8");
+      const allLines = content.trim().split("\n");
+      const tailLines = allLines.slice(-lines);
+      console.log(tailLines.join("\n"));
+    }
+  });
+
 program.parse();
