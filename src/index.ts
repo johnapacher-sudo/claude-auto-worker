@@ -66,15 +66,33 @@ program
   .option("--priority <number>", "Task priority (lower = higher)", "5")
   .option("--title <text>", "Task title")
   .option("--tasks-file <path>", "Path to tasks file", TASKS_FILE)
+  .option("--model <model>", "Claude model (e.g. sonnet, opus, haiku)")
+  .option("--permission-mode <mode>", "Permission mode (e.g. auto, default, bypassPermissions)")
+  .option("--allowedTools <tools>", "Comma-separated allowed tools (e.g. \"Bash,Edit\")")
+  .option("--max-turns <number>", "Maximum conversation turns")
   .action((prompt, opts) => {
     const store = getStore(opts.tasksFile);
+
+    let claudeArgs = null;
+    if (opts.model || opts.permissionMode || opts.allowedTools || opts.maxTurns) {
+      claudeArgs = {};
+      if (opts.model) claudeArgs.model = opts.model;
+      if (opts.permissionMode) claudeArgs.permissionMode = opts.permissionMode;
+      if (opts.allowedTools) claudeArgs.allowedTools = opts.allowedTools.split(",").map((s: string) => s.trim());
+      if (opts.maxTurns) claudeArgs.maxTurns = parseInt(opts.maxTurns);
+    }
+
     const task = store.addTask({
       title: opts.title ?? prompt.slice(0, 60),
       prompt,
       cwd: opts.cwd,
       priority: parseInt(opts.priority),
+      claudeArgs,
     });
     console.log(`Task added: ${task.id} — ${task.title}`);
+    if (claudeArgs) {
+      console.log(`  Claude args: ${JSON.stringify(claudeArgs)}`);
+    }
   });
 
 program
