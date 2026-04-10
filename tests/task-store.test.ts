@@ -83,4 +83,36 @@ describe("TaskStore", () => {
   it("returns null for non-existent task id", () => {
     expect(store.getById("nope")).toBeNull();
   });
+
+  it("persists claudeArgs with a task", () => {
+    const task = store.addTask({
+      title: "task with args",
+      prompt: "do stuff",
+      cwd: "/tmp",
+      priority: 1,
+      claudeArgs: {
+        model: "opus",
+        maxTurns: 5,
+        allowedTools: ["Bash", "Edit"],
+        permissionMode: "auto",
+      },
+    });
+
+    expect(task.claudeArgs).toEqual({
+      model: "opus",
+      maxTurns: 5,
+      allowedTools: ["Bash", "Edit"],
+      permissionMode: "auto",
+    });
+
+    // Verify persistence
+    const store2 = new TaskStore(store.getFilePath());
+    const loaded = store2.getById(task.id);
+    expect(loaded!.claudeArgs).toEqual(task.claudeArgs);
+  });
+
+  it("defaults claudeArgs to null when not provided", () => {
+    const task = store.addTask({ title: "plain", prompt: "p", cwd: "/tmp" });
+    expect(task.claudeArgs).toBeNull();
+  });
 });

@@ -36,4 +36,21 @@ describe("ClaudeRunner", () => {
     expect(result.exitCode).not.toBe(0);
     expect(result.stderr).toContain("timed out");
   }, 30000);
+
+  it("passes claudeArgs to spawn as CLI flags", async () => {
+    const runner = new ClaudeRunner({ timeout: 30000 });
+    const result = await runner.run({
+      prompt: "respond with exactly OK and nothing else",
+      cwd: process.cwd(),
+      claudeArgs: {
+        model: "haiku",
+        maxTurns: 1,
+        allowedTools: ["Read"],
+        permissionMode: "default",
+      },
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.isClaudeError).toBe(false);
+  }, 60000);
 });

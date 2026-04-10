@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { Task, TaskFile } from "./types.js";
+import type { Task, TaskFile, ClaudeArgs } from "./types.js";
 
 export class TaskStore {
   private filePath: string;
@@ -59,7 +59,7 @@ export class TaskStore {
     return tasks[0] ?? null;
   }
 
-  addTask(input: { title: string; prompt: string; cwd: string; priority?: number }): Task {
+  addTask(input: { title: string; prompt: string; cwd: string; priority?: number; claudeArgs?: ClaudeArgs | null }): Task {
     const data = this.read();
     const task: Task = {
       id: `task-${Date.now()}`,
@@ -72,7 +72,7 @@ export class TaskStore {
       startedAt: null,
       completedAt: null,
       result: null,
-      claudeArgs: null,
+      claudeArgs: input.claudeArgs ?? null,
     };
     data.tasks.push(task);
     this.write(data);

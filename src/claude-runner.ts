@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import type { TaskResult } from "./types.js";
+import type { TaskResult, ClaudeArgs } from "./types.js";
 
 export interface ClaudeRunnerConfig {
   timeout?: number; // milliseconds, default 600000 (10 minutes)
@@ -8,6 +8,7 @@ export interface ClaudeRunnerConfig {
 export interface RunOptions {
   prompt: string;
   cwd: string;
+  claudeArgs?: ClaudeArgs | null;
 }
 
 export class ClaudeRunner {
@@ -21,6 +22,11 @@ export class ClaudeRunner {
     return new Promise((resolve) => {
       const startTime = Date.now();
       const args = ["-p", options.prompt, "--output-format", "json"];
+      const ca = options.claudeArgs;
+      if (ca?.model) args.push("--model", ca.model);
+      if (ca?.permissionMode) args.push("--permission-mode", ca.permissionMode);
+      if (ca?.allowedTools?.length) args.push("--allowedTools", ...ca.allowedTools);
+      if (ca?.maxTurns) args.push("--max-turns", String(ca.maxTurns));
 
       const child = spawn("claude", args, {
         cwd: options.cwd,
