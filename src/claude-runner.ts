@@ -18,15 +18,19 @@ export class ClaudeRunner {
     this.config = { timeout: 600000, ...config };
   }
 
+  static buildArgs(prompt: string, claudeArgs?: ClaudeArgs | null): string[] {
+    const args = ["-p", prompt, "--output-format", "json"];
+    if (claudeArgs?.model) args.push("--model", claudeArgs.model);
+    if (claudeArgs?.permissionMode) args.push("--permission-mode", claudeArgs.permissionMode);
+    if (claudeArgs?.allowedTools?.length) args.push("--allowedTools", ...claudeArgs.allowedTools);
+    if (claudeArgs?.maxTurns != null) args.push("--max-turns", String(claudeArgs.maxTurns));
+    return args;
+  }
+
   run(options: RunOptions): Promise<TaskResult> {
     return new Promise((resolve) => {
       const startTime = Date.now();
-      const args = ["-p", options.prompt, "--output-format", "json"];
-      const ca = options.claudeArgs;
-      if (ca?.model) args.push("--model", ca.model);
-      if (ca?.permissionMode) args.push("--permission-mode", ca.permissionMode);
-      if (ca?.allowedTools?.length) args.push("--allowedTools", ...ca.allowedTools);
-      if (ca?.maxTurns != null) args.push("--max-turns", String(ca.maxTurns));
+      const args = ClaudeRunner.buildArgs(options.prompt, options.claudeArgs);
 
       const child = spawn("claude", args, {
         cwd: options.cwd,

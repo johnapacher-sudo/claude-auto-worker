@@ -53,7 +53,8 @@ describe("ReportGenerator", () => {
     const result = makeResult();
     gen.appendTaskResult(task, result);
 
-    const report = gen.getReport("2026-04-06");
+    const today = new Date().toISOString().slice(0, 10);
+    const report = gen.getReport(today);
     expect(report).not.toBeNull();
     expect(report!.tasks).toHaveLength(1);
     expect(report!.tasks[0].title).toBe("Test task");
@@ -71,7 +72,8 @@ describe("ReportGenerator", () => {
     gen.appendTaskResult(t1, r1);
     gen.appendTaskResult(t2, r2);
 
-    const report = gen.getReport("2026-04-06");
+    const today = new Date().toISOString().slice(0, 10);
+    const report = gen.getReport(today);
     expect(report!.tasks).toHaveLength(2);
     expect(report!.summary.total).toBe(2);
     expect(report!.summary.completed).toBe(1);
@@ -88,7 +90,8 @@ describe("ReportGenerator", () => {
     const result = makeResult({ claudeResult: "Summary of work done" });
     gen.appendTaskResult(task, result);
 
-    const report = gen.getReport("2026-04-06");
+    const today = new Date().toISOString().slice(0, 10);
+    const report = gen.getReport(today);
     expect(report!.tasks[0].resultSummary).toBe("Summary of work done");
   });
 
@@ -97,7 +100,8 @@ describe("ReportGenerator", () => {
     const result = makeResult({ claudeResult: null, stdout: "raw output here" });
     gen.appendTaskResult(task, result);
 
-    const report = gen.getReport("2026-04-06");
+    const today = new Date().toISOString().slice(0, 10);
+    const report = gen.getReport(today);
     expect(report!.tasks[0].resultSummary).toBe("raw output here");
   });
 });
